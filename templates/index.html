@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Check-In Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+            transition: background 0.3s;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .chat-container {
+            flex: 1;
+            display: grid;
+            grid-template-rows: 1fr auto; /* Messages take available space, input area is auto-sized */
+            height: 100%;
+            min-height: 0; /* Allow grid to shrink */
+        }
+
+        .messages {
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 0; /* Allow content to shrink */
+        }
+
+        .message {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .avatar.ai {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .avatar.user {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .message-content {
+            background: white;
+            border-radius: 18px;
+            padding: 15px 20px;
+            max-width: 70%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .speech-text {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+
+        .message.user .speech-text {
+            color: white;
+        }
+
+        .display-text {
+            font-size: 0.85rem;
+            color: #6b7280;
+            background: #f1f5f9;
+            padding: 10px 15px;
+            border-radius: 12px;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .message.user .display-text {
+            background: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.9);
+            border-left-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            flex-shrink: 0; /* Prevent input container from shrinking */
+            position: relative; /* Ensure it stays in position */
+            z-index: 10; /* Keep it above other content */
+        }
+
+        .form-container {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            flex: 1;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.85rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            padding: 10px;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            resize: none;
+            min-height: 20px;
+            max-height: 100px;
+            transition: border-color 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 18px;
+            max-width: 200px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #6b7280;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #fecaca;
+            font-size: 0.85rem;
+        }
+
+        .session-info {
+            background: #f0f9ff;
+            color: #0369a1;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #bae6fd;
+            font-size: 0.85rem;
+        }
+
+        .streaming-message {
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .streaming-message .message-content {
+            position: relative;
+        }
+
+        .streaming-message .message-content::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+            color: #6b7280;
+            font-weight: bold;
+        }
+
+        @keyframes dots {
+            0%, 33% { content: '...'; }
+            34%, 66% { content: '....'; }
+            67%, 100% { content: '.....'; }
+        }
+
+        /* Streaming Message Styles */
+        .streaming-message {
+            animation: pulse 2s infinite;
+            border-left: 3px solid #10b981;
+        }
+
+        .streaming-message .message-content {
+            border-left: 3px solid #10b981;
+            background: linear-gradient(90deg, #f0fdf4 0%, #ffffff 100%);
+        }
+
+        .streaming-message::after {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: blink 1.4s infinite both;
+        }
+
+        .message-finalized {
+            animation: fadeInSuccess 0.5s ease-out;
+        }
+
+        .message-finalized .message-content {
+            border-left: 3px solid #059669;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
+
+        @keyframes fadeInSuccess {
+            from {
+                transform: scale(0.98);
+                opacity: 0.8;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Enhanced Table Rendering */
+        .table-row {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 0;
+        }
+
+        .table-row:first-child {
+            font-weight: bold;
+            background: #f8fafc;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .table-cell {
+            flex: 1;
+            padding: 4px 8px;
+            border-right: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+        }
+
+        .table-cell:last-child {
+            border-right: none;
+        }
+
+        /* Enhanced Display Text */
+        .display-text strong {
+            color: #1f2937;
+        }
+
+        .display-text code {
+            background: #e5e7eb;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        .display-text em {
+            font-style: italic;
+            color: #6b7280;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Check-In Assistant</h1>
+            <p>Real-time streaming healthcare assistant</p>
+            <div class="status-indicator" id="statusIndicator"></div>
+        </div>
+
+        <div class="chat-container">
+            <div class="messages" id="messagesContainer">
+                <!-- Initial messages will be added here dynamically -->
+            </div>
+
+            <div class="input-container">
+                <div id="errorContainer"></div>
+                <div id="sessionInfo"></div>
+                
+                <div class="form-container" id="patientForm">
+                    <p style="text-align: center; color: #6b7280; margin-bottom: 15px; font-size: 0.9rem;">
+                        📋 Form is pre-populated with test data. Hit the send button to get started!
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="patientAccount">Patient Account</label>
+                            <input type="text" id="patientAccount" placeholder="Enter patient account">
+                        </div>
+                        <div class="form-group">
+                            <label for="appointmentId">Appointment ID</label>
+                            <input type="text" id="appointmentId" placeholder="Enter appointment ID">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" placeholder="Enter first name">
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" placeholder="Enter last name">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dob">Date of Birth</label>
+                            <input type="date" id="dob">
+                        </div>
+                        <div class="form-group">
+                            <label for="practiceCode">Practice Code</label>
+                            <input type="text" id="practiceCode" placeholder="Enter practice code">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <textarea 
+                        class="input-field" 
+                        id="messageInput" 
+                        placeholder="Type your message..."
+                        rows="1"
+                    ></textarea>
+                    <button class="send-button" id="sendButton">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AICheckInAssistant {
+            constructor() {
+                this.sessionId = null;
+                this.isConnected = false;
+                this.currentEventSource = null;
+                this.isTyping = false;
+                
+                this.initializeElements();
+                this.attachEventListeners();
+                this.updateStatus(false);
+            }
+
+            initializeElements() {
+                this.messagesContainer = document.getElementById('messagesContainer');
+                this.messageInput = document.getElementById('messageInput');
+                this.sendButton = document.getElementById('sendButton');
+                this.statusIndicator = document.getElementById('statusIndicator');
+                this.errorContainer = document.getElementById('errorContainer');
+                this.sessionInfo = document.getElementById('sessionInfo');
+                this.patientForm = document.getElementById('patientForm');
+                
+                // Form fields
+                this.patientAccount = document.getElementById('patientAccount');
+                this.appointmentId = document.getElementById('appointmentId');
+                this.firstName = document.getElementById('firstName');
+                this.lastName = document.getElementById('lastName');
+                this.dob = document.getElementById('dob');
+                this.practiceCode = document.getElementById('practiceCode');
+                
+                // Pre-populate with hardcoded values
+                this.populateFormWithTestData();
+            }
+
+            populateFormWithTestData() {
+                this.patientAccount.value = "1011163565413278";
+                this.appointmentId.value = "101116356555045";
+                this.firstName.value = "Azhar";
+                this.lastName.value = "Ali";
+                this.dob.value = "1997-03-17"; // HTML date format
+                this.practiceCode.value = "1011163";
+            }
+
+            attachEventListeners() {
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+                
+                // Auto-resize textarea
+                this.messageInput.addEventListener('input', () => {
+                    this.messageInput.style.height = 'auto';
+                    this.messageInput.style.height = this.messageInput.scrollHeight + 'px';
+                });
+            }
+
+            updateStatus(connected) {
+                this.isConnected = connected;
+                if (connected) {
+                    this.statusIndicator.classList.add('connected');
+                } else {
+                    this.statusIndicator.classList.remove('connected');
+                }
+            }
+
+            showError(message) {
+                this.errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+                setTimeout(() => {
+                    this.errorContainer.innerHTML = '';
+                }, 5000);
+            }
+
+            showSessionInfo(message) {
+                this.sessionInfo.innerHTML = `<div class="session-info">${message}</div>`;
+            }
+
+            addMessage(content, isUser = false, isTyping = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+                
+                if (isTyping) {
+                    messageDiv.innerHTML = `
+                        <div class="avatar ai">AI</div>
+                        <div class="typing-indicator">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <span style="font-size: 0.8rem; color: #6b7280;">Thinking...</span>
+                        </div>
+                    `;
+                } else {
+                    const speechText = typeof content === 'string' ? content : (content.speech || '');
+                    const displayText = typeof content === 'object' ? content.display : '';
+                    
+                    messageDiv.innerHTML = `
+                        <div class="avatar ${isUser ? 'user' : 'ai'}">${isUser ? 'U' : 'AI'}</div>
+                        <div class="message-content">
+                            <div class="speech-text">${speechText}</div>
+                            ${displayText ? `<div class="display-text">${displayText}</div>` : ''}
+                        </div>
+                    `;
+                }
+                
+                this.messagesContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+                return messageDiv;
+            }
+
+            removeTypingIndicator() {
+                const typingIndicators = this.messagesContainer.querySelectorAll('.typing-indicator');
+                typingIndicators.forEach(indicator => {
+                    indicator.closest('.message').remove();
+                });
+            }
+
+            addStreamingMessage(content) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message ai streaming-message';
+                
+                const speechText = content.speech || '';
+                const displayText = content.display || '';
+                
+                messageDiv.innerHTML = `
+                    <div class="avatar ai">AI</div>
+                    <div class="message-content">
+                        <div class="speech-text">${speechText}</div>
+                        ${displayText ? `<div class="display-text">${this.renderMarkdown(displayText)}</div>` : ''}
+                    </div>
+                `;
+                
+                this.messagesContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+                return messageDiv;
+            }
+
+            updateStreamingMessage(messageElement, content) {
+                const speechText = content.speech || '';
+                const displayText = content.display || '';
+                
+                const messageContent = messageElement.querySelector('.message-content');
+                if (messageContent) {
+                    // Use innerHTML to properly render markdown and HTML content
+                    messageContent.innerHTML = `
+                        <div class="speech-text">${speechText}</div>
+                        ${displayText ? `<div class="display-text">${this.renderMarkdown(displayText)}</div>` : ''}
+                    `;
+                    this.scrollToBottom();
+                }
+            }
+
+            renderMarkdown(text) {
+                if (!text) return '';
+                
+                // Basic markdown rendering for better display
+                return text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')             // Italic
+                    .replace(/`(.*?)`/g, '<code>$1</code>')           // Inline code
+                    .replace(/\n/g, '<br>')                           // Line breaks
+                    .replace(/\|(.*?)\|/g, (match, content) => {      // Simple table handling
+                        if (content.includes('---')) {
+                            return match; // Skip table separator rows
+                        }
+                        return `<div class="table-row">${content.split('|').map(cell => 
+                            `<span class="table-cell">${cell.trim()}</span>`
+                        ).join('')}</div>`;
+                    });
+            }
+
+            finalizeStreamingMessage(messageElement, content) {
+                // Remove streaming class and animation to finalize the message
+                messageElement.classList.remove('streaming-message');
+                
+                // Update with final content if provided
+                if (content && (content.speech || content.display)) {
+                    this.updateStreamingMessage(messageElement, content);
+                }
+                
+                // Add finalized indicator
+                messageElement.classList.add('message-finalized');
+            }
+
+            scrollToBottom() {
+                this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+            }
+
+            getPatientData() {
+                // Hardcoded patient data for testing
+                return {
+                    PATIENT_ACCOUNT: "1011163565413278",
+                    APPOINTMENT_ID: "101116356555045",
+                    DOB: "3/17/1997",
+                    FIRST_NAME: "Azhar",
+                    LAST_NAME: "Ali",
+                    PRACTICE_CODE: "1011163"
+                };
+            }
+
+            validatePatientData(data) {
+                const required = ['PATIENT_ACCOUNT', 'APPOINTMENT_ID', 'FIRST_NAME', 'LAST_NAME', 'DOB', 'PRACTICE_CODE'];
+                const missing = required.filter(field => !data[field]);
+                return missing.length === 0 ? null : `Missing required fields: ${missing.join(', ')}`;
+            }
+
+            async sendMessage() {
+                const message = this.messageInput.value.trim();
+                const isNewSession = !this.sessionId;
+                
+                let payload = {};
+                
+                if (isNewSession) {
+                    // New session - include patient data
+                    const patientData = this.getPatientData();
+                    const validationError = this.validatePatientData(patientData);
+                    
+                    if (validationError) {
+                        this.showError(validationError);
+                        return;
+                    }
+                    
+                    payload = {
+                        ...patientData,
+                        stream: true
+                    };
+                    
+                    if (message) {
+                        payload.response = message;
+                    }
+                } else {
+                    // Continuing session
+                    if (!message) {
+                        this.showError('Please enter a message to continue the conversation.');
+                        return;
+                    }
+                    
+                    payload = {
+                        session_id: this.sessionId,
+                        response: message,
+                        stream: true
+                    };
+                }
+
+                // Add user message to chat (if there's a message)
+                if (message) {
+                    this.addMessage(message, true);
+                    this.messageInput.value = '';
+                    this.messageInput.style.height = 'auto';
+                }
+
+                // Show typing indicator
+                const typingElement = this.addMessage('', false, true);
+                this.isTyping = true;
+
+                this.sendButton.disabled = true;
+                this.updateStatus(true);
+
+                try {
+                    await this.streamResponse(payload);
+                } catch (error) {
+                    console.error('Stream error:', error);
+                    this.showError(`Connection error: ${error.message}`);
+                    this.removeTypingIndicator();
+                } finally {
+                    this.sendButton.disabled = false;
+                    this.updateStatus(false);
+                    this.isTyping = false;
+                }
+            }
+
+            async streamResponse(payload) {
+                return new Promise((resolve, reject) => {
+                    // Close any existing EventSource
+                    if (this.currentEventSource) {
+                        this.currentEventSource.close();
+                    }
+
+                    // Use fetch for the initial request with streaming
+                    fetch('/get_ai_checkin_st', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'text/event-stream',
+                        },
+                        body: JSON.stringify(payload),
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = '';
+
+                        const readStream = async () => {
+                            try {
+                                while (true) {
+                                    const { done, value } = await reader.read();
+                                    
+                                    if (done) {
+                                        this.removeTypingIndicator();
+                                        resolve();
+                                        break;
+                                    }
+
+                                    buffer += decoder.decode(value, { stream: true });
+                                    const lines = buffer.split('\n');
+                                    buffer = lines.pop(); // Keep incomplete line
+
+                                    for (const line of lines) {
+                                        if (line.startsWith('data: ')) {
+                                            try {
+                                                const data = JSON.parse(line.slice(6));
+                                                this.handleStreamData(data);
+                                            } catch (e) {
+                                                console.warn('Failed to parse stream data:', line);
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (error) {
+                                this.removeTypingIndicator();
+                                reject(error);
+                            }
+                        };
+
+                        readStream();
+                    })
+                    .catch(error => {
+                        this.removeTypingIndicator();
+                        reject(error);
+                    });
+                });
+            }
+
+            handleStreamData(data) {
+                console.log('🔄 SSE Stream data received:', data);
+
+                if  (!data.status) {
+                    this.removeTypingIndicator();
+                    this.showError(data.message || 'An error occurred');
+                    return;
+                }
+
+                // Handle LangGraph custom streaming chunks
+                if (data.type === 'chunk' && data.streaming) {
+                    // Custom chunk from agent (real-time)
+                    const chunk = data.chunk || {};
+                    const accumulated = data.accumulated || {};
+                    const chunkSpeech = chunk.speech || '';
+                    const chunkDisplay = chunk.display || '';
+                    const accumulatedSpeech = accumulated.speech || '';
+                    const accumulatedDisplay = accumulated.display || '';
+                    
+                    // Use accumulated content for display to ensure proper order
+                    if (accumulatedSpeech || accumulatedDisplay) {
+                        // Check if this is the first chunk by looking for existing streaming message
+                        const lastMessage = this.chatHistory.lastElementChild;
+                        const isStreamingUpdate = lastMessage && lastMessage.classList.contains('streaming-message');
+                        
+                        if (isStreamingUpdate) {
+                            // Update existing streaming message
+                            this.updateStreamingMessage(lastMessage, { speech: accumulatedSpeech, display: accumulatedDisplay });
+                        } else {
+                            // Create new streaming message
+                            this.addStreamingMessage({ speech: accumulatedSpeech, display: accumulatedDisplay });
+                        }
+                    }
+                    return;
+                }
+                if (data.type === 'complete' && !data.streaming) {
+                    // Final completion chunk from agent
+                    const final = data.final_response || {};
+                    const speechText = final.speech || '';
+                    const displayText = final.display || '';
+                    
+                    // Finalize the streaming message
+                    const lastMessage = this.messagesContainer.lastElementChild;
+                    if (lastMessage && lastMessage.classList.contains('streaming-message')) {
+                        this.finalizeStreamingMessage(lastMessage, { speech: speechText, display: displayText });
+                    } else if (speechText || displayText) {
+                        this.addMessage({ speech: speechText, display: displayText }, false);
+                    }
+                    
+                    this.showSessionInfo('Check-in process completed successfully!');
+                    this.removeTypingIndicator();
+                    return;
+                }
+
+                // Enhanced handling for node updates with progressive streaming
+                if (data.status && data.response) {
+                    console.log(`🎯 Agent update from: ${data.agent || 'unknown'}`, data.response);
+                    this.removeTypingIndicator();
+                    if (data.session_id && !this.sessionId) {
+                        this.sessionId = data.session_id;
+                        this.showSessionInfo(`Session started: ${this.sessionId.slice(0, 8)}...`);
+                        this.patientForm.classList.add('hidden');
+                    }
+                    
+                    const agentName = data.agent || 'unknown';
+                    let speechText = '';
+                    let displayText = '';
+                    
+                    // Handle different response structures
+                    if (typeof data.response === 'string') {
+                        // Direct string response (e.g., from classify_agent)
+                        speechText = data.response;
+                        displayText = '';
+                    } else if (data.response) {
+                        // Nested structure (e.g., from classify_agent with role/content)
+                        if (typeof data.response === 'string') {
+                            // classify_agent returns content as string
+                            speechText = data.response;
+                            displayText = '';
+                        } else {
+                            // Other agents with content object containing speech/display
+                            const responseContent = data.response;
+                            speechText = responseContent.speech || '';
+                            displayText = responseContent.display || '';
+                        }
+                    } else {
+                        // Fallback for other structures
+                        speechText = data.response.speech || data.response.toString();
+                        displayText = data.response.display || '';
+                    }
+                    
+                    if (speechText || displayText) {
+                        // Check if this is the same agent continuing to stream
+                        const lastMessage = this.messagesContainer.lastElementChild;
+                        const isStreamingUpdate = lastMessage && 
+                                                lastMessage.classList.contains('streaming-message') &&
+                                                lastMessage.dataset.agent === agentName;
+                        
+                        if (isStreamingUpdate) {
+                            console.log(`📝 Updating existing stream for agent: ${agentName}`);
+                            // Update existing streaming message for the same agent
+                            this.updateStreamingMessage(lastMessage, { speech: speechText, display: displayText });
+                        } else {
+                            console.log(`🆕 Creating new stream for agent: ${agentName}`);
+                            // Different agent or new conversation - finalize any existing streaming message
+                            const existingStreamingMessages = this.messagesContainer.querySelectorAll('.streaming-message');
+                            existingStreamingMessages.forEach(msg => {
+                                console.log(`🏁 Finalizing previous stream from agent: ${msg.dataset.agent}`);
+                                this.finalizeStreamingMessage(msg);
+                            });
+                            
+                            // Create new streaming message for the new agent
+                            const streamingMessage = this.addStreamingMessage({ speech: speechText, display: displayText });
+                            streamingMessage.dataset.agent = agentName; // Track which agent this message belongs to
+                        }
+                    }
+                    
+                    if (data.completed) {
+                        console.log('🎉 Conversation completed - finalizing all streams');
+                        // Finalize any streaming messages when conversation is completed
+                        const streamingMessages = this.messagesContainer.querySelectorAll('.streaming-message');
+                        streamingMessages.forEach(msg => this.finalizeStreamingMessage(msg));
+                        this.showSessionInfo('Check-in process completed successfully!');
+                    }
+                }
+                if (data.status) {
+                    this.removeTypingIndicator();
+                    if (data.completed) {
+                        this.showSessionInfo('Check-in process completed successfully!');
+                    }
+                }
+            }
+
+        }
+
+        // Initialize the assistant when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new AICheckInAssistant();
+        });
+    </script>
+</body>
+</html>
