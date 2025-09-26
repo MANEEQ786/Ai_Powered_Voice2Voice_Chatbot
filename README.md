@@ -108,9 +108,8 @@ The system employs a network of specialized agents, each responsible for gatheri
 
 ## 🎬 Demo
 
-[![AI Voice Chatbot Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)]([https://www.youtube.com/watch?v=YOUR_VIDEO_ID](https://github.com/MANEEQ786/Ai_Powered_Voice2Voice_Chatbot/blob/main/DemoV2VChatbot.mp4))
-<video>src="https://github.com/MANEEQ786/Ai_Powered_Voice2Voice_Chatbot/blob/main/DemoV2VChatbot.mp4"</video>
-*Click the image above to watch a demonstration of the AI Voice Chatbot in action. Replace YOUR_VIDEO_ID with your actual YouTube video ID.*
+<video src="https://raw.githubusercontent.com/MANEEQ786/Ai_Powered_Voice2Voice_Chatbot/main/DemoV2VChatbot.mp4" controls title="AI Voice Chatbot Demo"></video>
+
 
 ## 📊 System Workflow
 
