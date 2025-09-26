@@ -107,8 +107,8 @@ The system employs a network of specialized agents, each responsible for gatheri
 5. **Review the collected information** at the end of the session
 
 ## 🎬 Demo
+![Demo Video](https://github.com/MANEEQ786/Ai_Powered_Voice2Voice_Chatbot/blob/main/DemoV2VChatbot.mp4))
 
-<video src="[https://github.com/MANEEQ786/Ai_Powered_Voice2Voice_Chatbot/blob/main/DemoV2VChatbot.mp4](https://github.com/MANEEQ786/Ai_Powered_Voice2Voice_Chatbot/blob/main/DemoV2VChatbot.mp4)?raw=true" controls title="AI Voice Chatbot Demo" width="640" height="360"></video>
 
 
 ## 📊 System Workflow
